@@ -7,6 +7,10 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing;
 use Symfony\Component\HttpKernel;
+use Symfony\Component\EventDispatcher\EventDispatcher;
+use Symfony\Component\HttpKernel\HttpCache\HttpCache;
+use Symfony\Component\HttpKernel\HttpCache\Store;
+use Symfony\Component\HttpKernel\HttpCache\Esi;
  
 function render_template($request)
 {
@@ -24,18 +28,12 @@ $context = new Routing\RequestContext();
 $context->fromRequest($request);
 $matcher = new Routing\Matcher\UrlMatcher($routes, $context);
 $resolver = new HttpKernel\Controller\ControllerResolver();
- 
-try {
-    $request->attributes->add($matcher->match($request->getPathInfo()));
- 
-    $controller = $resolver->getController($request);
-    $arguments = $resolver->getArguments($request, $controller);
- 
-    $response = call_user_func_array($controller, $arguments);
-} catch (Routing\Exception\ResourceNotFoundException $e) {
-    $response = new Response('Not Found', 404);
-} catch (Exception $e) {
-    $response = new Response('An error occurred', 500);
-}
- 
-$response->send();
+
+$dispatcher = new EventDispatcher();
+$dispatcher->addSubscriber(new Embex\ContentLengthListener());
+$dispatcher->addSubscriber(new Embex\GoogleListener());
+
+$framework = new Embex\Framework($dispatcher, $matcher, $resolver);
+$framework = new HttpCache($framework, new Store(__DIR__.'/../cache'), new Esi(), array('debug' => true));
+
+$framework->handle($request)->send();

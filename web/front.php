@@ -29,9 +29,22 @@ $context->fromRequest($request);
 $matcher = new Routing\Matcher\UrlMatcher($routes, $context);
 $resolver = new HttpKernel\Controller\ControllerResolver();
 
+$errorHandler = function (HttpKernel\Exception\FlattenException $exception) {
+    $msg = 'Mbeeex, Something went wrong! ('.$exception->getMessage().')';
+ 
+    return new Response($msg, $exception->getStatusCode());
+};
+
+$listener = new HttpKernel\EventListener\ExceptionListener('Calender\\Controller\\ErrorController::exceptionAction');
+
 $dispatcher = new EventDispatcher();
 $dispatcher->addSubscriber(new Embex\ContentLengthListener());
 $dispatcher->addSubscriber(new Embex\GoogleListener());
+$dispatcher->addSubscriber(new HttpKernel\EventListener\ExceptionListener($errorHandler));
+$dispatcher->addSubscriber($listener);
+$dispatcher->addSubscriber(new HttpKernel\EventListener\ResponseListener('UTF-8'));
+$dispatcher->addSubscriber(new HttpKernel\EventListener\StreamedResponseListener());
+$dispatcher->addSubscriber(new Embex\StringResponseListener());
 
 $framework = new Embex\Framework($dispatcher, $matcher, $resolver);
 $framework = new HttpCache($framework, new Store(__DIR__.'/../cache'), new Esi(), array('debug' => true));

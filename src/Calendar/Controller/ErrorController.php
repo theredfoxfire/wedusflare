@@ -11,6 +11,6 @@ class ErrorController{
 	public function exceptionAction(FlattenException $exception){
 		$msg = 'Mbeeex, Something went wrong! ('.$exception->getMessage().')';
 		
-		return new StreamedResponse($msg, $exception->getStatusCode());
+		return new Response($msg, $exception->getStatusCode());
 	}
 }
